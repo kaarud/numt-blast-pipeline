@@ -1,0 +1,39 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+type: software
+title: "NUMT-ClinVar Pipeline"
+abstract: >
+  A bioinformatics pipeline for the systematic identification of unrecognised
+  Nuclear Mitochondrial DNA Segments (NUMTs) among pathogenic ClinVar insertions.
+  The pipeline filters ClinVar large insertions (≥50 bp), extracts inserted sequences
+  from HGVS notation, aligns them to the mitochondrial reference genome (rCRS) and
+  to the human nuclear genome (hg38), and classifies variants as NOVEL_NUMT_CANDIDATE,
+  CONFIRMED_NUMT (ancient nuclear copy at reported locus), or KNOWN_REFERENCE_NUMT.
+authors:
+  - family-names: Durand
+    given-names: Aksel
+    email: aksel.durand@chu-angers.fr
+    affiliation: "CHU Angers, Service de Génétique, Angers, France"
+repository-code: "https://github.com/<your-username>/NUMT-ClinVar-Pipeline"
+license: MIT
+version: "1.0.0"
+date-released: "2025-03-28"
+keywords:
+  - NUMTs
+  - mitochondrial DNA
+  - ClinVar
+  - bioinformatics
+  - BLAST
+  - nuclear mitochondrial insertions
+  - Mendelian disease
+references:
+  - type: article
+    title: >
+      A mitochondrial DNA sequence variant causing tuberous sclerosis complex
+    authors:
+      - family-names: Bhatt
+        given-names: DL
+    journal: "Genetics in Medicine"
+    year: 2021
+    doi: "10.1038/s41436-021-01117-2"
+    notes: "Index case motivating this pipeline"

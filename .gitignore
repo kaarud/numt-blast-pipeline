@@ -1,0 +1,70 @@
+# macOS
+.DS_Store
+**/.DS_Store
+._*
+
+# Fichiers temporaires Office
+~$*.docx
+~$*.xlsx
+~$*.pptx
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.ipynb_checkpoints/
+*.egg-info/
+.env
+.venv/
+venv/
+
+# Claude Code — configuration locale et instructions personnelles
+.claude/
+**/.claude/
+CLAUDE.md
+**/CLAUDE.md
+
+# research_agent — outil personnel, non lié au pipeline NUMT public
+01_code/research_agent.py
+agent_config.yaml
+
+# Vault Obsidian et état research_agent (générés localement)
+.processed_keys.json
+.processed_keys.json.tmp
+vault/
+08_vault/
+
+# Données brutes (volumineuses, non versionnées — régénérables)
+02_data/raw/blast_db/
+02_data/raw/*.gz
+02_data/raw/*.fasta
+
+# Fichiers intermédiaires générés par le pipeline (régénérables avec make excel)
+# Le .gitkeep preserve la structure des répertoires dans git
+02_data/processed/*
+!02_data/processed/.gitkeep
+02_data/annotations/*
+!02_data/annotations/.gitkeep
+02_data/clinvar_exports/*
+!02_data/clinvar_exports/.gitkeep
+
+# Checkpoints pipeline
+.pipeline_checkpoint.json
+
+# Résultats BLAST bruts
+blast_genome_results_raw/
+blast_genome_cache/
+*.asn
+
+# Logs
+*.log
+
+# Fichiers PDF de publications (copyright — non redistribuables)
+PIIS088789942100151X.pdf
+
+# Contenu personnel — rédaction, présentations, archives (non publiés ici)
+03_manuscript/
+04_abstract/
+05_presentations/
+06_media/
+07_archive/

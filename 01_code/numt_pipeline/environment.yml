@@ -1,0 +1,21 @@
+name: NUMT
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - python=3.11
+  - pandas
+  - requests
+  - tqdm
+  - pymongo
+  - biopython       # NCBI Entrez, SeqIO, BLAST parsers
+  - blast           # NCBI BLAST+ command-line tools (via bioconda)
+  - last            # LAST aligner — adaptive scoring + split alignment (via bioconda)
+  - pip
+  - pip:
+    - python-dotenv
+    - pyzotero        # Zotero Web API client
+    - pdfplumber      # PDF text extraction
+    - pyyaml          # YAML config parsing
+    - anthropic       # Anthropic SDK (article_ai.py)
