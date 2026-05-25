@@ -1,4 +1,4 @@
-# 1. NUMT-ClinVar Pipeline
+# NUMT-ClinVar Pipeline
 
 **Identification of unrecognised Nuclear Mitochondrial DNA Segments (NUMTs) among pathogenic ClinVar insertions**
 
@@ -7,19 +7,17 @@
 
 ---
 
-## 1.1. Scientific Background
+## Scientific Background
 
-NUMTs (Nuclear Mitochondrial DNA Segments) are fragments of mitochondrial DNA that have been transferred and integrated into the nuclear genome over evolutionary time. When a NUMT insertion occurs within a coding exon, it can disrupt gene function and cause Mendelian disease.
+NUMTs (Nuclear Mitochondrial DNA Segments) are fragments of mitochondrial DNA that have been transferred and integrated into the nuclear genome. When a NUMT insertion occurs within a coding exon, it can disrupt gene function and cause Mendelian disease.
 
 **Index case:** A 138 bp mitochondrial fragment (MT-ND5, 98% identity to rCRS) inserted into exon 17 of *TSC2* causes Tuberous Sclerosis Complex (NM_000548.5(TSC2):c.1830_1831ins[138]; CHU Angers).
 
 **Hypothesis:** Among the large insertions (≥50 bp) classified as pathogenic in ClinVar, a subset may represent unrecognised de novo NUMTs — mischaracterised by standard short-read sequencing pipelines.
 
-**Target class — `NOVEL_NUMT_CANDIDATE`:** Variants whose inserted sequence aligns to the mitochondrial genome (rCRS) but has **no hit** in the human nuclear reference genome (hg38). These represent putative de novo mtDNA insertions.
-
 ---
 
-## 1.2. Pipeline Overview
+## Pipeline Overview
 
 ```
 ClinVar FTP (~350 MB)
@@ -32,46 +30,45 @@ Sequences from HGVS  →  extracted_sequences.fasta
     │
     ▼ Step 3 — Deduplication (one entry per AlleleID, GRCh38 preferred)
     │
-    ▼ Step 4 — BLAST vs rCRS (NC_012920.1)
+    ▼ Step 4 — 04_blast_mito.py — BLAST vs rCRS (NC_012920.1)
 Mitochondrial hits  →  4_BLAST_Mito sheet
     │
-    ▼ Step 5 — BLAST vs hg38
+    ▼ Step 5 — 05_blast_genome.py — BLAST vs hg38
 Nuclear hits        →  5_BLAST_Genome sheet
     │
-    ▼ Classification
+    ▼ Step 6 — 06_mechanism.py — Classification + mechanism analysis
 numt_class per variant  →  6_Classification + NOVEL_CANDIDATES sheets
 ```
 
-### 1.2.1. Classification
+### Classification
 
 | Class | Definition |
 |---|---|
-| `NOVEL_NUMT_CANDIDATE` ⭐ | mito hit + **no** nuclear hit → putative de novo pathogenic NUMT |
+| `NOVEL_NUMT_CANDIDATE` | mito hit + **no** nuclear hit → putative de novo pathogenic NUMT |
 | `CONFIRMED_NUMT` | mito hit + nuclear hit at the ClinVar locus (ancient copy in hg38) |
 | `KNOWN_REFERENCE_NUMT` | mito hit + nuclear hit elsewhere in hg38 |
-
-> **Note:** `CONFIRMED_NUMT` denotes a *bioinformatic* classification — the mtDNA-like sequence is already present in the hg38 reference at the reported locus (e.g. MSH2/MTND5P11). This is distinct from *literature recognition* of NUMT origin, tracked in the `literature_numt_mention` column — only MCOLN1 (Goldin 2004) has a published article acknowledging the mitochondrial origin of the insertion.
-| `DIRECT_MITO_REF` | mitochondrial origin explicit in the HGVS name |
 | `MITO_HIT_ONLY` | mito hit, genome BLAST not performed |
 | `NO_MITO_HIT` | no mitochondrial alignment |
 
+> **Note:** `CONFIRMED_NUMT` denotes a *bioinformatic* classification — the mtDNA-like sequence is already present in the hg38 reference at the reported locus (e.g. MSH2/MTND5P11). This is distinct from *literature recognition* of NUMT origin.
+
 ---
 
-## 1.3. Quick Start
+## Quick Start
 
 ```bash
 # Clone
-git clone github.com/kaarud/numt‑blast‑pipeline
-cd NUMT
+git clone https://github.com/kaarud/numt-blast-pipeline.git
+cd numt-blast-pipeline
 
-# Set up environment
+# Set up environment (micromamba, mamba, or conda)
 micromamba env create -f 01_code/numt_pipeline/environment.yml
 micromamba activate NUMT
 
 # Run the full pipeline → multi-sheet Excel output
 make excel
 
-# Fast run (skip genome BLAST)
+# Or skip genome BLAST (faster, partial classification only)
 make excel-skip-genome
 ```
 
@@ -79,74 +76,66 @@ Output: `02_data/processed/numt_pipeline_results.xlsx`
 
 ---
 
-## 1.4. Installation
-
-### 1.4.1. Requirements
+## Requirements
 
 - Python ≥ 3.11
 - BLAST+ ≥ 2.17 (`blastn`, `makeblastdb`)
-- micromamba / conda
+- micromamba, mamba, or conda
 
-### 1.4.2. Dependencies
+### Python dependencies
+
+Installed automatically via `environment.yml`:
+
+| Package | Purpose |
+|---|---|
+| pandas | Data processing |
+| biopython | NCBI Entrez, BLAST parsing |
+| blast (BLAST+) | Sequence alignment (via bioconda) |
+| openpyxl | Excel output |
+| requests | ClinVar download |
+| tqdm | Progress bars |
+
+### Reference databases
+
+The pipeline auto-builds the mitochondrial BLAST database from rCRS (NC_012920.1) on first run.
+
+For genome BLAST (Step 5), you need either a local hg38 database or an NCBI email for remote BLAST:
 
 ```bash
-micromamba env create -f 01_code/numt_pipeline/environment.yml
-micromamba activate NUMT
-```
-
-| Package | Version tested | Purpose |
-|---|---|---|
-| Python | 3.11 | Runtime |
-| pandas | ≥ 2.0 | Data processing |
-| biopython | ≥ 1.83 | NCBI Entrez, BLAST parsing |
-| blast (BLAST+) | ≥ 2.17 | Sequence alignment |
-| openpyxl | ≥ 3.1 | Excel output |
-| requests | — | ClinVar download |
-| tqdm | — | Progress bars |
-
-### 1.4.3. Reference databases
-
-The pipeline auto-builds the mitochondrial BLAST database from rCRS on first run.
-
-For genome BLAST (Step 5), a local hg38 BLAST database is required (~15 GB):
-```bash
-# Download hg38 FASTA, then:
+# Option A — local hg38 BLAST database (~15 GB)
 makeblastdb -in hg38.fa -dbtype nucl -out 02_data/raw/blast_db/hg38
-
-# Then run:
 make excel GENOME_DB=02_data/raw/blast_db/hg38
-```
 
-Alternatively, use remote NCBI BLAST (slower, no local db required):
-```bash
+# Option B — remote NCBI BLAST (slower, no local db required)
 python 01_code/numt_pipeline/run_pipeline_excel.py --email your@email.com
 ```
 
 ---
 
-## 1.5. Usage
+## Usage
 
-### 1.5.1. Makefile commands
-
-```bash
-make excel                  # Full pipeline → Excel output (recommended)
-make excel-skip-genome      # Skip genome BLAST (fast, partial classification)
-make step1                  # Step 1 only: ClinVar download + filter
-make step2                  # Step 2 only: HGVS sequence extraction
-make step4                  # Step 4 only: mitochondrial BLAST
-make step5                  # Step 5 only: genome BLAST + classification
-make status                 # Show status of all intermediate files
-make clean                  # Remove intermediate files
-```
-
-### 1.5.2. Resume from a step
+### Makefile commands
 
 ```bash
-# Resume from step 3 (steps 1-2 already done)
-python 01_code/numt_pipeline/run_pipeline_excel.py --from-step 3 --skip-genome
+make excel              # Full pipeline → Excel output (recommended)
+make excel-skip-genome  # Skip genome BLAST (fast, mito-only classification)
+make step1              # Step 1 only: ClinVar download + filter
+make step2              # Step 2 only: HGVS sequence extraction
+make step4              # Step 4 only: mitochondrial BLAST
+make step5              # Step 5 only: genome BLAST + classification
+make step6              # Step 6 only: mechanism analysis
+make status             # Show status of all intermediate files
+make clean              # Remove intermediate files
 ```
 
-### 1.5.3. Individual scripts
+### Resume from a specific step
+
+```bash
+# Resume from step 4 (steps 1-2 already done)
+python 01_code/numt_pipeline/run_pipeline_excel.py --from-step 4 --skip-genome
+```
+
+### Individual scripts
 
 ```bash
 # Step 1 — Download and filter ClinVar
@@ -161,13 +150,13 @@ python 01_code/numt_pipeline/04_blast_mito.py
 # Step 5 — BLAST vs hg38 + classification
 python 01_code/numt_pipeline/05_blast_genome.py [--genome-db /path/to/hg38] [--skip-genome]
 
-# Step 6 — Insertion mechanism analysis (NOVEL_NUMT_CANDIDATE only)
+# Step 6 — Insertion mechanism analysis
 python 01_code/numt_pipeline/06_mechanism.py
 ```
 
 ---
 
-## 1.6. Output
+## Output
 
 The pipeline produces a multi-sheet Excel workbook at `02_data/processed/numt_pipeline_results.xlsx`:
 
@@ -179,29 +168,22 @@ The pipeline produces a multi-sheet Excel workbook at `02_data/processed/numt_pi
 | `4_BLAST_Mito` | Mitochondrial BLAST hits (1 row per HSP) |
 | `5_BLAST_Genome` | Nuclear genome BLAST hits |
 | `6_Classification` | Final colour-coded classification |
-| **`NOVEL_CANDIDATES`** | ⭐ mito+ / nuclear− → main targets |
+| **`NOVEL_CANDIDATES`** | mito+ / nuclear− → main targets |
 | `MITO_AND_NUCLEAR` | mito+ / nuclear+ |
-| `DIRECT_MITO_REF` | HGVS-annotated mitochondrial origin |
 
-### 1.6.1. Results (ClinVar 2025, genome BLAST complete)
+### Expected results (ClinVar 2025)
 
-| Class | N | Notes |
-|---|---|---|
-| `NO_MITO_HIT` | 854 | No mitochondrial homology — excluded |
-| `NOVEL_NUMT_CANDIDATE` ⭐ | **20** | No nuclear copy in hg38 — putative de novo NUMTs |
-| `CONFIRMED_NUMT` | **1** | MSH2/Lynch syndrome — ancient nuclear copy at ClinVar locus (chr5, MTND5P11) |
-| `KNOWN_REFERENCE_NUMT` | 0 | — |
-| `DIRECT_MITO_REF` | 0 | — |
-
-**81% (17/21) of all mito-hit candidates carry Pathogenic or Likely pathogenic classification** (16 NOVEL + 1 CONFIRMED_NUMT — MSH2/Lynch syndrome).
-
-See `02_data/data_interpretation.md` for full results and working interpretation.
+| Class | N |
+|---|---|
+| `NO_MITO_HIT` | 854 |
+| `NOVEL_NUMT_CANDIDATE` | 20 |
+| `CONFIRMED_NUMT` | 1 |
 
 ---
 
-## 1.7. BLAST parameters
+## BLAST Parameters
 
-### 1.7.1. Mitochondrial BLAST (Step 4)
+### Mitochondrial BLAST (Step 4)
 
 | Parameter | Value | Rationale |
 |---|---|---|
@@ -212,34 +194,32 @@ See `02_data/data_interpretation.md` for full results and working interpretation
 
 Confidence tiers: `STRONG_HIT` (pident ≥ 90%, len ≥ 50 bp, e-value ≤ 1e-5) / `MODERATE_HIT` / `WEAK_HIT`
 
-### 1.7.2. Nuclear BLAST (Step 5)
+### Nuclear BLAST (Step 5)
 
 Only canonical chromosomes (chr1–22, chrX, chrY) count as nuclear hits. Alternative loci (NW_/NT_ accessions) are excluded.
 
 ---
 
-## 1.8. Repository Structure
+## Repository Structure
 
 ```
-01_code/
-  numt_pipeline/            # Pipeline scripts
-    01_clinvar_fetch.py     # Step 1: ClinVar download + filter
-    02_sequence_extract.py  # Step 2: HGVS sequence extraction
-    04_blast_mito.py        # Step 4: mitochondrial BLAST
-    05_blast_genome.py      # Step 5: genome BLAST + classification
-    06_mechanism.py         # Step 6: insertion mechanism prediction
-    run_pipeline_excel.py   # Main orchestrator
-    environment.yml         # Conda environment
+01_code/numt_pipeline/
+    01_clinvar_fetch.py         # Step 1: ClinVar download + filter
+    02_sequence_extract.py      # Step 2: HGVS sequence extraction
+    04_blast_mito.py            # Step 4: mitochondrial BLAST
+    05_blast_genome.py          # Step 5: genome BLAST + classification
+    06_mechanism.py             # Step 6: insertion mechanism prediction
+    run_pipeline_excel.py       # Main orchestrator (steps 1–6)
+    environment.yml             # Conda/micromamba environment
 02_data/
-  raw/                      # ClinVar download, rCRS FASTA, BLAST databases (not versioned)
-  processed/                # Intermediate files + Excel output (not versioned)
-03_manuscript/              # Manuscript files
-Makefile                    # Pipeline commands
+    raw/                        # ClinVar download, rCRS, BLAST databases (not versioned)
+    processed/                  # Intermediate files + Excel output (not versioned)
+Makefile                        # Pipeline commands
 ```
 
 ---
 
-## 1.9. Citation
+## Citation
 
 If you use this pipeline in your research, please cite:
 
@@ -249,13 +229,13 @@ See also [CITATION.cff](CITATION.cff) for machine-readable citation metadata.
 
 ---
 
-## 1.10. License
+## License
 
-This project is licensed under the MIT License — see [LICENSE](LICENSE) for details.
+MIT — see [LICENSE](LICENSE) for details.
 
 ---
 
-## 1.11. Contact
+## Contact
 
 Aksel Durand — aksel.durand@chu-angers.fr
 CHU Angers, Service de Génétique
