@@ -29,6 +29,7 @@ Insertions ≥ 50 bp  →  clinvar_insertions_gt50bp.tsv
 Sequences from HGVS  →  extracted_sequences.fasta
     │
     ▼ Step 3 — Deduplication (one entry per AlleleID, GRCh38 preferred)
+    │           (replaces the original MongoDB step — see note below)
     │
     ▼ Step 4 — 04_blast_mito.py — BLAST vs rCRS (NC_012920.1)
 Mitochondrial hits  →  4_BLAST_Mito sheet
@@ -39,6 +40,8 @@ Nuclear hits        →  5_BLAST_Genome sheet
     ▼ Step 6 — 06_mechanism.py — Classification + mechanism analysis
 numt_class per variant  →  6_Classification + NOVEL_CANDIDATES sheets
 ```
+
+> **Note on Step 3:** The original Step 3 (`03_mongodb_store.py`) ingested variants into MongoDB, designed for a parallel process tracking potentially-NUMT variants and their analysis results across the pipeline. For the ClinVar dataset (<2,000 rows), MongoDB was overkill — a bazooka to kill a fly. A simple pandas deduplication with Excel output achieves the same goal with no server dependency.
 
 ### Classification
 
@@ -164,7 +167,7 @@ The pipeline produces a multi-sheet Excel workbook at `02_data/processed/numt_pi
 |---|---|
 | `1_ClinVar_Raw` | Filtered ClinVar insertions |
 | `2_Sequences` | After HGVS parsing |
-| `3_Deduplicated` | 1 row per AlleleID (GRCh38 preferred) |
+| `3_Deduplicated` | 1 row per AlleleID (GRCh38 preferred) — see note on Step 3 |
 | `4_BLAST_Mito` | Mitochondrial BLAST hits (1 row per HSP) |
 | `5_BLAST_Genome` | Nuclear genome BLAST hits |
 | `6_Classification` | Final colour-coded classification |

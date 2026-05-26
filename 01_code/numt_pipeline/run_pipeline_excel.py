@@ -1715,6 +1715,12 @@ def main() -> None:
     sheets["2_Sequences"] = df_seq
 
     # ── ÉTAPE 3 : dédoublonnage (remplace MongoDB) ───────────────────────
+    # NB : l'étape 3 originale (03_mongodb_store.py) stockait les variants
+    # dans MongoDB pour un processus parallèle de suivi patient — variants
+    # potentiellement NUMTs et résultats d'analyse par cette pipeline.
+    # Pour le jeu ClinVar (<2 000 lignes), utiliser MongoDB était démesuré
+    # (tuer une mouche avec un bazooka). Un simple dédoublonnage pandas +
+    # sortie Excel remplit le même rôle sans dépendance serveur.
     log("")
     log("─── Étape 3 : Dédoublonnage AlleleID (GRCh38 préféré) ───")
     df_dedup = dedup_by_allele(df_seq)
